@@ -22,8 +22,13 @@ import java.util.concurrent.Future;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
+import algorithms.demo.Maze3dAdapter;
 import algorithms.mazeGenerators.Maze3d;
 import algorithms.mazeGenerators.Position;
+import algorithms.search.AirDistance;
+import algorithms.search.Astar;
+import algorithms.search.Bfs;
+import algorithms.search.ManhattanDistance;
 import algorithms.search.Searchable;
 import algorithms.search.Searcher;
 import algorithms.search.Solution;
@@ -42,13 +47,9 @@ public class MyClientHandler implements ClinetHandler {
 	 * C'tor
 	 */
 	public MyClientHandler() {
-		try {
 			loadMazeToSolution();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
 		if(this.mazeSolution==null)
-		this.mazeSolution = new HashMap<Maze3d, Solution<Position>>();
+			this.mazeSolution = new HashMap<Maze3d, Solution<Position>>();
 		this.threadpool = Executors.newFixedThreadPool(3);
 	}
 
@@ -74,37 +75,96 @@ public class MyClientHandler implements ClinetHandler {
 	private void handleSolution(ArrayList<Object> list) {
 		
 		String algorithm = (String) list.get(1);
-		Maze3d maze = (Maze3d) list.get(2);
+		Maze3d m = (Maze3d) list.get(2);
 		// Create ObjectOutputStream to answer the client throw
-		
 		// Create solution for the maze in different thread
 		
+		Future<Solution<Position>> future = threadpool.submit(new Callable<Solution<Position>>(){	
+			@Override
+			public Solution<Position> call() throws Exception {
+				Solution<Position> sol=new Solution<Position>();
+				Maze3dAdapter MA=new Maze3dAdapter(m, 10);//cost 10
+				
+					try {
+//							if(MazeToSolution.containsKey(m)){	
+//									setChanged();
+//									notifyObservers("solution for "+param[1]+" is already exist");
+//									return null;
+//								}
+							 if(list.size()==3||list.size()==4){
+								if(m!=null)//get the array list for specific name
+									switch (algorithm) {
+										case "Astar-manhattan":
+											Searcher<Position> AstarsearcherManhattan=new Astar<Position>(new ManhattanDistance());
+											if (list.size() == 3){
+												sol = AstarsearcherManhattan.search(MA);
+												MazeToSolution.put(m,sol);
+												return sol;
+											}
+											else if (list.size() == 4){
+												Position newEnter=(Position)list.get(3);
+												sol = AstarsearcherManhattan.search(MA,newEnter);
+												MazeToSolution.put(m,sol);
+												return sol;
+											}
+										case "Astar-air":											
+											Searcher<Position> AstarsearcherAir=new Astar<Position>(new AirDistance());
+											if (list.size() == 3){
+												sol = AstarsearcherAir.search(MA);
+												MazeToSolution.put(m,sol);
+												return sol;
+											}
+											else if (list.size() == 4){
+												Position newEnter=(Position)list.get(3);
+												sol = AstarsearcherAir.search(MA,newEnter);
+												MazeToSolution.put(m,sol);
+												return sol;
+											}
+										case "Bfs":
+											Searcher<Position> searcher=new Bfs<>();
+											if (list.size() == 3){
+												sol= searcher.search(MA);
+												MazeToSolution.put(m,sol);
+												return sol;
+											}
+											else if (list.size() == 4){
+												Position newEnter=(Position)list.get(3);
+												sol= searcher.search(MA,newEnter);
+												MazeToSolution.put(m,sol);
+												return sol;
+											}
+										default:
+											throw new IOException("not a valid algorithm");
+									}
+								else throw new IOException("maze not found");
+							}	
+						else throw new IOException("Not a Valid command");
 		
-		
-		/*here comes our solve algorithm*/
-		
-		
-				return solution;
-			}
+					} catch (Exception e) {
+						throw new IOException(e.getMessage());
+					}
+				}
 		});
-
-		// Add the solution to the relevant HashMaps
+		
+		
 		Solution<Position> solution;
 		try {
-			solution = sol.get();
-			mazeSolution.put(maze, solution);
+			solution = future.get();  // Add the solution to the HashMaps
+			mazeSolution.put(m, solution);
 			
-			// Send solution to client
-			messageToClient.writeObject(solution);
+			
+			messageToClient.writeObject(solution);  // Send solution to client
 			messageToClient.flush();
 			
-			// Close streams
-			messageFromClient.close();
+			
+			messageFromClient.close();  // Close streams
 			messageToClient.close();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
+	
+	
 	
 	/**
 	 * Load the saved solutions from the zip file
