@@ -25,7 +25,7 @@ public class CLI extends CommonView {
 			public void run() {
 				String line;
 				out.println("----- Server - Command Line -----");
-				out.println("Hello and welcome to the server side. \ntype \"open the server\" to open it\ntype \"stop the server\" to stop it");
+				out.println("Hello and welcome to the server side. \ntype \"open the server\" to open it\ntype \"close the server\" to stop it");
 				out.flush();
 				  try {
 					while(!(line = in.readLine()).equals("close the server")){

@@ -22,21 +22,28 @@ import java.util.concurrent.Future;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
+import algorithms.mazeGenerators.Maze3d;
+import algorithms.mazeGenerators.Position;
+import algorithms.search.Searchable;
+import algorithms.search.Searcher;
+import algorithms.search.Solution;
+
 
 
 public class MyClientHandler implements ClinetHandler {
 
-	private HashMap<maze, Solution<Position>> mazeSolution;
+	private HashMap<Maze3d, Solution<Position>> mazeSolution;
 	private ExecutorService threadpool;
 	private ObjectOutputStream messageToClient;
 	private ObjectInputStream messageFromClient;
+	private HashMap<Maze3d, Solution<Position>> MazeToSolution;
 	
 	/**
 	 * C'tor
 	 */
 	public MyClientHandler() {
 		try {
-			loadFromZip();
+			loadMazeToSolution();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -71,23 +78,12 @@ public class MyClientHandler implements ClinetHandler {
 		// Create ObjectOutputStream to answer the client throw
 		
 		// Create solution for the maze in different thread
-		Future<Solution<Position>> sol = threadpool.submit(new Callable<Solution<Position>>() {
-
-			public Solution<Position> call() {
-
-				Searcher<Position> algo = null;
-				Searchable<Position> sm = new Maze3dSearchable(maze);
-				if (algorithm.equals("bfs")) {
-					algo = new BFS<Position>();
-				} else if (algorithm.equals("manhattan")) {
-					Heuristic<Position> ManhattanDistance = new MazeManhattanDistance();
-					algo = new AStar<Position>(ManhattanDistance);
-				} else if (algorithm.equals("air")) {
-					Heuristic<Position> AirDistance = new MazeAirDistance();
-					algo = new AStar<Position>(AirDistance);
-				}
-
-				Solution<Position> solution = algo.search(sm);
+		
+		
+		
+		/*here comes our solve algorithm*/
+		
+		
 				return solution;
 			}
 		});
@@ -114,6 +110,28 @@ public class MyClientHandler implements ClinetHandler {
 	 * Load the saved solutions from the zip file
 	 * @throws Exception
 	 */
+	public void loadMazeToSolution (){
+		File file = new File("lib/mazes.zip");
+		if (file.exists()){
+			try {
+				ObjectInputStream in = new ObjectInputStream(new GZIPInputStream(new FileInputStream(file)));
+				try {
+					MazeToSolution = (HashMap<Maze3d, Solution<Position>>)in.readObject();
+				} catch (ClassNotFoundException e) {
+					setChanged();
+					notifyObservers(e.getMessage());
+				}
+				in.close();
+			} catch (IOException e) {
+				setChanged();
+				notifyObservers(e.getMessage());
+			
+			}
+		}
+		else 
+			MazeToSolution =  new HashMap<Maze3d,Solution<Position>>();
+	} 
+/*
 	private void loadFromZip() throws Exception {
 		
 		ObjectInputStream in;
@@ -130,7 +148,7 @@ public class MyClientHandler implements ClinetHandler {
 				System.out.println("Maze solution file is empty");
 			}
 		}
-	}
+	}*/
 	
 	/**
 	 * Save out solutions in zip file
