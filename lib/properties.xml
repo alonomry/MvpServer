@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<properties>
+	<staff>
+		<port>5400</port>
+		<NumOfClients>10</NumOfClients>
+	</staff>
+</properties>
