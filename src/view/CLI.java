@@ -7,6 +7,17 @@ import java.util.HashMap;
 
 import presenter.Command;
 
+/**
+ * <h2>CLI SERVER</h2>
+ * this class will perform as the server command line to open/close the server with the proper commands</br>
+ * @param 	private BufferedReader in;
+ * @param private PrintWriter out;
+ * @param HashMap<String, Command> hashCommand;
+ * 
+ * @author Alon Tal & Omry Dabush
+ *
+ */
+
 public class CLI extends CommonView {
 
 	private BufferedReader in;
@@ -18,6 +29,12 @@ public class CLI extends CommonView {
 		this.out = out;
 	}
 	
+	
+	/**
+	 * <h2>Srtat Method</h2>
+	 * this method will start the main server thread that will wait until</br>
+	 * until the "close the server is entered"
+	 */
 	@Override
 	public void start() {
 		new Thread(new Runnable() {
@@ -25,7 +42,7 @@ public class CLI extends CommonView {
 			public void run() {
 				String line;
 				out.println("----- Server - Command Line -----");
-				out.println("Hello and welcome to the server side. \ntype \"open the server\" to open it\ntype \"close the server\" to stop it");
+				out.println("Welcome to the server side. \ntype \"open the server\" to open it\ntype \"close the server\" to stop it");
 				out.flush();
 				  try {
 					while(!(line = in.readLine()).equals("close the server")){
@@ -37,13 +54,12 @@ public class CLI extends CommonView {
 								setChanged();
 								notifyObservers(command);
 								out.flush();
-								line = in.readLine();
 							}
 							else
 								System.out.println("Worng Command");
 					}
 					setChanged();
-					notifyObservers(hashCommand.get("exit"));
+					notifyObservers(hashCommand.get("close the server"));
 					out.println("--- EXIT ---");
 				} catch (IOException e) {
 					setChanged();
@@ -53,14 +69,24 @@ public class CLI extends CommonView {
 			}	
 		}).start();
 	}
-
+/**
+ * <h2>Printing a string</h2>
+ * 
+ */
 	@Override
 	public void display(String s) {
 		out.println(s);
 		out.flush();
 	}
 	
-	
+	/**
+	 * <h2>command Recognizer</h2>
+	 * This method will recognize the command that was entered by the user<br>
+	 * from a continuous String
+	 * 
+	 * @param s
+	 * @return
+	 */
 	public String commandRecognizer (String s){
 		String[] stringCommand = s.split(" ");
 		switch (stringCommand[0]) {

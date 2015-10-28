@@ -7,7 +7,6 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import model.*;
 import presenter.MyPresenter;
-import presenter.Presenter;
 import view.*;
 
 

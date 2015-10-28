@@ -9,7 +9,7 @@ import model.Model;
 import view.*;
 
 /**
- * The Class MyController.
+ * The Class MyPresenter.
  */
 public class MyPresenter implements Presenter, Observer{
 
@@ -70,6 +70,7 @@ public class MyPresenter implements Presenter, Observer{
 			@Override
 			public void doCommand() {
 				model.closeserver();
+				
 				
 			}
 		});

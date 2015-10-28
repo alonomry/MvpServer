@@ -1,0 +1,1 @@
+java -cp ./lib/Maze3dProject.jar;MvpServer.jar boot.Run

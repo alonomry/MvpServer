@@ -1,27 +1,23 @@
 package model;
 
-import java.io.BufferedReader;
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
-
 import algorithms.demo.Maze3dAdapter;
 import algorithms.mazeGenerators.Maze3d;
 import algorithms.mazeGenerators.Position;
@@ -29,15 +25,25 @@ import algorithms.search.AirDistance;
 import algorithms.search.Astar;
 import algorithms.search.Bfs;
 import algorithms.search.ManhattanDistance;
-import algorithms.search.Searchable;
 import algorithms.search.Searcher;
 import algorithms.search.Solution;
 
-
+/**
+ * <h2>MyClientHandler</h2>
+ * this class will handle the request from the client side <br>
+ * will perform the calculation and will send it back to the server
+ * @param ExecutorService
+ * @param ObjectOutputStream 
+ * @param ObjectInputStream
+ * @param HashMap<Maze3d, Solution<Position>>
+ * 
+ * @author Omryno1
+ *
+ */
 
 public class MyClientHandler implements ClinetHandler {
 
-	private HashMap<Maze3d, Solution<Position>> mazeSolution;
+//	private HashMap<Maze3d, Solution<Position>> mazeSolution;
 	private ExecutorService threadpool;
 	private ObjectOutputStream messageToClient;
 	private ObjectInputStream messageFromClient;
@@ -48,21 +54,36 @@ public class MyClientHandler implements ClinetHandler {
 	 */
 	public MyClientHandler() {
 			loadMazeToSolution();
-		if(this.mazeSolution==null)
-			this.mazeSolution = new HashMap<Maze3d, Solution<Position>>();
+		if(this.MazeToSolution==null)
+			this.MazeToSolution = new HashMap<Maze3d, Solution<Position>>();
 		this.threadpool = Executors.newFixedThreadPool(3);
 	}
 
+	/**
+	 * this method will recognize exactly what the client has requested and will perform the wanted task
+	 * 
+	 * 
+	 */
 	@Override
 	public void handleClient(InputStream inFromClient, OutputStream outToClient) {
 			// Get client's Inputstream from client which contain maze and algorithm
 			try {
 				messageFromClient = new ObjectInputStream(inFromClient);
+				@SuppressWarnings("unchecked")
 				ArrayList<Object> problem = (ArrayList<Object>)messageFromClient.readObject();
+				
 				messageToClient = new ObjectOutputStream(outToClient);
+				
 				if (problem.get(0).equals("solve")) {
 					handleSolution(problem);
-				}	
+				}
+				else if (problem.get(0).equals("get solution")){
+					Maze3d m = (Maze3d) problem.get(1);
+					if(MazeToSolution.containsKey(m)){
+						Solution<Position> solution = MazeToSolution.get(m);
+						messageToClient.writeObject(solution);
+					}
+				}
 				else
 				{
 					System.out.println("Invalid problem");
@@ -71,7 +92,12 @@ public class MyClientHandler implements ClinetHandler {
 				e.printStackTrace();
 			}	
 	}
-	
+	/**
+	 * this method will get a maze and will solve it, afterwards the solution will be send to the server
+	 * 
+	 * 
+	 * @param list
+	 */
 	private void handleSolution(ArrayList<Object> list) {
 		
 		String algorithm = (String) list.get(1);
@@ -86,11 +112,9 @@ public class MyClientHandler implements ClinetHandler {
 				Maze3dAdapter MA=new Maze3dAdapter(m, 10);//cost 10
 				
 					try {
-//							if(MazeToSolution.containsKey(m)){	
-//									setChanged();
-//									notifyObservers("solution for "+param[1]+" is already exist");
-//									return null;
-//								}
+							if(list.size()==3 && MazeToSolution.containsKey(m)){	
+									return MazeToSolution.get(m);
+								}
 							 if(list.size()==3||list.size()==4){
 								if(m!=null)//get the array list for specific name
 									switch (algorithm) {
@@ -150,7 +174,7 @@ public class MyClientHandler implements ClinetHandler {
 		Solution<Position> solution;
 		try {
 			solution = future.get();  // Add the solution to the HashMaps
-			mazeSolution.put(m, solution);
+			MazeToSolution.put(m, solution);
 			
 			
 			messageToClient.writeObject(solution);  // Send solution to client
@@ -170,6 +194,7 @@ public class MyClientHandler implements ClinetHandler {
 	 * Load the saved solutions from the zip file
 	 * @throws Exception
 	 */
+	@SuppressWarnings("unchecked")
 	public void loadMazeToSolution (){
 		File file = new File("lib/mazes.zip");
 		if (file.exists()){
@@ -178,67 +203,46 @@ public class MyClientHandler implements ClinetHandler {
 				try {
 					MazeToSolution = (HashMap<Maze3d, Solution<Position>>)in.readObject();
 				} catch (ClassNotFoundException e) {
-					setChanged();
-					notifyObservers(e.getMessage());
+					e.printStackTrace();
 				}
 				in.close();
 			} catch (IOException e) {
-				setChanged();
-				notifyObservers(e.getMessage());
+					System.err.println("File Does Not Exist");
 			
 			}
 		}
 		else 
 			MazeToSolution =  new HashMap<Maze3d,Solution<Position>>();
 	} 
-/*
-	private void loadFromZip() throws Exception {
-		
-		ObjectInputStream in;
-		File file = new File("./mazeSolution.gz");
-		
-		// If the file doesn't exist - create it
-		if(!file.createNewFile())
-		{
-			try {
-				in = new ObjectInputStream(new GZIPInputStream(new FileInputStream(file)));
-				this.mazeSolution = (HashMap<Maze3d, Solution<Position>>) in.readObject();
-				in.close();
-			} catch (IOException e) {
-				System.out.println("Maze solution file is empty");
-			}
-		}
-	}*/
 	
 	/**
 	 * Save out solutions in zip file
 	 * @throws IOException
 	 */
-	public void saveToZip() throws IOException {
-
-		// Write all the data from the HashMap to the specified file
-		FileOutputStream fos = null;
-		GZIPOutputStream gzip = null;
-		ObjectOutputStream out = null;
-		
+	public void saveMazes()  {
+		try{
+			// Write all the data from the HashMap to the specified file
+		   	if (!MazeToSolution.isEmpty()){
+						ObjectOutputStream out = new ObjectOutputStream(
+								   new BufferedOutputStream(new GZIPOutputStream(new FileOutputStream(
+								   new File("lib/mazes.zip")))));
+			    		out.writeObject(MazeToSolution);
+			    		out.close();
+		    	}
+		}catch (IOException e){
+			System.out.println("Error Saving Mazes");
+		}
+	}
+	
+	public void exitClient(){
+		threadpool.shutdown();
+		@SuppressWarnings("unused")
+		Boolean allTasksCompleted=true;
 		try {
-			
-			fos = new FileOutputStream("./mazeSolution.gz");
-			gzip = new GZIPOutputStream(fos);
-			out = new ObjectOutputStream(gzip);
-			out.writeObject(mazeSolution);
-			out.flush();
-			out.close();
-			
-		} catch (FileNotFoundException e) {
-			System.out.println("File doesn't found");
-		} catch (IOException e) {
-			System.out.println("IO exception");
-		} finally {
-			if(gzip != null)
-			{
-				gzip.close();
-			}
+			while(!(allTasksCompleted=threadpool.awaitTermination(5, TimeUnit.SECONDS)));
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 	}
 }
